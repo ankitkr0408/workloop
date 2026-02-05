@@ -19,6 +19,9 @@ app.use(cors({
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Import routes
+import authRoutes from './routes/auth';
+
 // Health check
 app.get('/health', (req, res) => {
     res.json({
@@ -28,7 +31,9 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API routes (will be added in Phase 2)
+// API routes
+app.use('/api/auth', authRoutes);
+
 app.get('/api', (req, res) => {
     res.json({ message: 'WorkLoop API v1.0' });
 });
