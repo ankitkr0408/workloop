@@ -21,6 +21,12 @@ app.use(morgan('dev'));
 
 // Import routes
 import authRoutes from './routes/auth';
+import organizationRoutes from './routes/organizations';
+import userRoutes from './routes/users';
+import projectRoutes from './routes/projects';
+import activityRoutes from './routes/activities';
+import checkInRoutes from './routes/checkIns';
+import clientRoutes from './routes/client';
 
 // Health check
 app.get('/health', (req, res) => {
@@ -33,6 +39,12 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/check-ins', checkInRoutes);
+app.use('/api/client', clientRoutes);
 
 app.get('/api', (req, res) => {
     res.json({ message: 'WorkLoop API v1.0' });
