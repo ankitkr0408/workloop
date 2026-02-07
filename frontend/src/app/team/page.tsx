@@ -24,10 +24,17 @@ export default function TeamPage() {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [editRole, setEditRole] = useState('');
+    const [editLoading, setEditLoading] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
-    const [inviteData, setInviteData] = useState({ email: '', fullName: '', role: 'member' });
     const [inviteLoading, setInviteLoading] = useState(false);
     const [inviteError, setInviteError] = useState('');
+    const [inviteData, setInviteData] = useState({
+        email: '',
+        fullName: '',
+        role: 'member' as 'admin' | 'member'
+    });
 
     useEffect(() => {
         fetchTeamMembers();
@@ -58,6 +65,32 @@ export default function TeamPage() {
             setInviteError(err.response?.data?.error || 'Failed to send invite');
         } finally {
             setInviteLoading(false);
+        }
+    };
+
+    const handleUpdateRole = async () => {
+        if (!editingUser) return;
+        setEditLoading(true);
+        try {
+            await api.patch(`/users/${editingUser.id}`, { role: editRole });
+            setEditingUser(null);
+            fetchTeamMembers();
+        } catch (error) {
+            console.error('Failed to update role:', error);
+            alert('Failed to update role');
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    const handleRemoveUser = async (userId: string) => {
+        if (!confirm('Are you sure you want to remove this user? This cannot be undone.')) return;
+        try {
+            await api.delete(`/users/${userId}`);
+            fetchTeamMembers();
+        } catch (error) {
+            console.error('Failed to remove user:', error);
+            alert('Failed to remove user');
         }
     };
 
@@ -174,11 +207,37 @@ export default function TeamPage() {
                                                 }
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                {user.id !== currentUser?.id && canInvite && (
-                                                    <button className="text-blue-600 hover:text-blue-900">
-                                                        Edit
+                                                <div className="flex items-center justify-end space-x-3">
+                                                    {/* View Activity */}
+                                                    {/* Note: In a real app we'd link to /activities?userId=... */}
+                                                    <button
+                                                        onClick={() => alert('Activity View coming in next update')}
+                                                        className="text-gray-400 hover:text-gray-600"
+                                                        title="View Activity"
+                                                    >
+                                                        📊
                                                     </button>
-                                                )}
+
+                                                    {user.id !== currentUser?.id && canInvite && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingUser(user);
+                                                                    setEditRole(user.role);
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-900"
+                                                            >
+                                                                Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRemoveUser(user.id)}
+                                                                className="text-red-600 hover:text-red-900"
+                                                            >
+                                                                Remove
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -235,7 +294,7 @@ export default function TeamPage() {
                                     </label>
                                     <select
                                         value={inviteData.role}
-                                        onChange={(e) => setInviteData({ ...inviteData, role: e.target.value })}
+                                        onChange={(e) => setInviteData({ ...inviteData, role: e.target.value as 'admin' | 'member' })}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                     >
                                         <option value="member">Member</option>
@@ -269,6 +328,44 @@ export default function TeamPage() {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Edit Role Modal */}
+                {editingUser && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4">Edit Role: {editingUser.fullName}</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                    <select
+                                        value={editRole}
+                                        onChange={(e) => setEditRole(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="member">Member</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="owner">Owner</option>
+                                    </select>
+                                </div>
+                                <div className="flex justify-end space-x-3 pt-2">
+                                    <button
+                                        onClick={() => setEditingUser(null)}
+                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleUpdateRole}
+                                        disabled={editLoading}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                    >
+                                        {editLoading ? 'Saving...' : 'Save'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

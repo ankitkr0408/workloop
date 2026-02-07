@@ -79,8 +79,8 @@ export default function SettingsPage() {
                             <button
                                 onClick={() => setActiveTab('profile')}
                                 className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'profile'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-blue-500 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 Profile
@@ -88,8 +88,8 @@ export default function SettingsPage() {
                             <button
                                 onClick={() => setActiveTab('organization')}
                                 className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'organization'
-                                        ? 'border-blue-500 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                    ? 'border-blue-500 text-blue-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                     }`}
                             >
                                 Organization
@@ -164,9 +164,11 @@ export default function SettingsPage() {
                             </form>
 
                             {/* Integrations Section */}
+                            {/* Integrations Section */}
                             <div className="mt-8 pt-8 border-t border-gray-200">
                                 <h3 className="text-lg font-bold text-gray-900 mb-4">Integrations</h3>
                                 <div className="space-y-4">
+                                    {/* GitHub */}
                                     <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                                         <div className="flex items-center space-x-3">
                                             <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold">
@@ -179,11 +181,29 @@ export default function SettingsPage() {
                                                 <p className="text-sm text-gray-500">Sync commits automatically</p>
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium">
-                                            Coming Soon
-                                        </button>
+                                        {user?.integrations?.some(i => i.provider === 'github' && i.isActive) ? (
+                                            <button
+                                                onClick={async () => {
+                                                    if (confirm('Disconnect GitHub?')) {
+                                                        await api.delete('/integrations/github');
+                                                        refreshUser();
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+                                            >
+                                                Disconnect
+                                            </button>
+                                        ) : (
+                                            <a
+                                                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/integrations/github/auth`}
+                                                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition text-sm font-medium"
+                                            >
+                                                Connect
+                                            </a>
+                                        )}
                                     </div>
 
+                                    {/* Google Calendar */}
                                     <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                                         <div className="flex items-center space-x-3">
                                             <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold">
@@ -194,9 +214,26 @@ export default function SettingsPage() {
                                                 <p className="text-sm text-gray-500">Track meetings and events</p>
                                             </div>
                                         </div>
-                                        <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium">
-                                            Coming Soon
-                                        </button>
+                                        {user?.integrations?.some(i => i.provider === 'google_calendar' && i.isActive) ? (
+                                            <button
+                                                onClick={async () => {
+                                                    if (confirm('Disconnect Google Calendar?')) {
+                                                        await api.delete('/integrations/google');
+                                                        refreshUser();
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium"
+                                            >
+                                                Disconnect
+                                            </button>
+                                        ) : (
+                                            <a
+                                                href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/integrations/google/auth`}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+                                            >
+                                                Connect
+                                            </a>
+                                        )}
                                     </div>
                                 </div>
                             </div>

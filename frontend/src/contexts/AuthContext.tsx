@@ -10,6 +10,12 @@ interface User {
     role: 'owner' | 'admin' | 'member';
     avatarUrl?: string;
     onboardingCompleted: boolean;
+    lastLoginAt?: string;
+    integrations?: Array<{
+        provider: 'github' | 'google_calendar';
+        isActive: boolean;
+        connectedAt: string;
+    }>;
 }
 
 interface Organization {

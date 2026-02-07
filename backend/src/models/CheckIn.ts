@@ -25,7 +25,7 @@ export interface ICheckIn extends Document {
 
 const CheckInSchema = new Schema<ICheckIn>(
     {
-        uuid: { type: String, required: true, unique: true },
+        uuid: { type: String, required: true },
         organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
         projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
         userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

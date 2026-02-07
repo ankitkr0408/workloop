@@ -21,12 +21,15 @@ export interface IProject extends Document {
     uuid: string;
     organizationId: mongoose.Types.ObjectId;
     name: string;
+    slug: string; // Add slug for simple public IDs
     description?: string;
     clientName: string;
     clientEmail?: string;
     status: 'active' | 'on_hold' | 'completed' | 'archived';
     members: IProjectMember[];
     clientLinks: IClientLink[];
+    githubRepos?: string[];
+    googleCalendarIds?: string[];
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date;
@@ -34,9 +37,10 @@ export interface IProject extends Document {
 
 const ProjectSchema = new Schema<IProject>(
     {
-        uuid: { type: String, required: true, unique: true },
+        uuid: { type: String, required: true },
         organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
         name: { type: String, required: true },
+        slug: { type: String, required: true }, // Add slug field
         description: String,
         clientName: { type: String, required: true },
         clientEmail: String,
@@ -64,6 +68,9 @@ const ProjectSchema = new Schema<IProject>(
                 createdAt: { type: Date, default: Date.now },
             },
         ],
+
+        githubRepos: [{ type: String }], // e.g., "owner/repo"
+        googleCalendarIds: [{ type: String }], // e.g., "primary"
 
         deletedAt: Date,
     },

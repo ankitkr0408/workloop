@@ -14,9 +14,9 @@ export interface IOrganization extends Document {
 
 const OrganizationSchema = new Schema<IOrganization>(
     {
-        uuid: { type: String, required: true, unique: true },
+        uuid: { type: String, required: true },
         name: { type: String, required: true },
-        slug: { type: String, required: true, unique: true },
+        slug: { type: String, required: true },
         teamSize: { type: String, required: true },
         plan: { type: String, enum: ['free', 'starter', 'pro'], default: 'free' },
         billingEmail: String,

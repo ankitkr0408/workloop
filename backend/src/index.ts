@@ -4,19 +4,20 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { generalLimiter } from './middleware/rateLimiter';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Security Middleware
 app.use(helmet());
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Limit payload size
 app.use(morgan('dev'));
 
 // Import routes
@@ -27,8 +28,11 @@ import projectRoutes from './routes/projects';
 import activityRoutes from './routes/activities';
 import checkInRoutes from './routes/checkIns';
 import clientRoutes from './routes/client';
+import integrationRoutes from './routes/integrations';
+import reportRoutes from './routes/reports';
+import './config/passport'; // Initialize passport config
 
-// Health check
+// Health check (no rate limit for monitoring)
 app.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -36,6 +40,9 @@ app.get('/health', (req, res) => {
         environment: process.env.NODE_ENV || 'development'
     });
 });
+
+// Apply rate limiting to all API routes
+app.use('/api', generalLimiter);
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -45,6 +52,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/activities', activityRoutes);
 app.use('/api/check-ins', checkInRoutes);
 app.use('/api/client', clientRoutes);
+app.use('/api/integrations', integrationRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/api', (req, res) => {
     res.json({ message: 'WorkLoop API v1.0' });

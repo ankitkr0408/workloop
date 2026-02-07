@@ -32,7 +32,7 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
     {
-        uuid: { type: String, required: true, unique: true },
+        uuid: { type: String, required: true },
         organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
         email: { type: String, required: true },
         passwordHash: String,

@@ -5,14 +5,16 @@ import User from '../models/User';
 import Organization from '../models/Organization';
 import { generateTokenPair, verifyToken } from '../utils/jwt';
 import { requireAuth } from '../middleware/auth';
+import { authLimiter, registerLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
 /**
  * POST /api/auth/register
  * Register new organization (owner account)
+ * Rate limit: 3 signups per hour per IP
  */
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', registerLimiter, async (req: Request, res: Response) => {
     try {
         const { email, password, fullName, organizationName, organizationSlug, teamSize } = req.body;
 
@@ -95,8 +97,9 @@ router.post('/register', async (req: Request, res: Response) => {
 /**
  * POST /api/auth/login
  * Login with email and password
+ * Rate limit: 5 attempts per 15 minutes per IP
  */
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authLimiter, async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 

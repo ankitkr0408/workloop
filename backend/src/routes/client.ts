@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import Project from '../models/Project';
 import Activity from '../models/Activity';
 import CheckIn from '../models/CheckIn';
+import WeeklyReport from '../models/WeeklyReport';
 import { optionalAuth } from '../middleware/auth';
 
 const router = express.Router();
@@ -78,7 +79,45 @@ router.get('/:uuid', optionalAuth, async (req: Request, res: Response) => {
         const totalHours = recentCheckIns.reduce((sum, c) => sum + (c.hoursWorked || 0), 0);
         const activeMembers = new Set(recentActivities.map(a => a.userId.toString())).size;
 
-        // Transform activities to plain English
+        // Fetch weekly reports (only sent ones or all? let's show all generated ones)
+        const reports = await WeeklyReport.find({
+            projectId: project._id,
+            status: 'sent' // Only show reports that were marked as sent/ready
+        })
+            .sort({ weekEndDate: -1 })
+            .limit(10);
+
+        // Calculate daily stats for chart
+        const dailyStatsMap = new Map<string, { date: string; hours: number; commits: number }>();
+        const now = new Date();
+
+        // Initialize last 7 days with 0
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            dailyStatsMap.set(dateStr, { date: dateStr, hours: 0, commits: 0 });
+        }
+
+        // Fill with actual data
+        recentActivities.forEach(a => {
+            const dateStr = a.activityDate.toISOString().split('T')[0];
+            if (dailyStatsMap.has(dateStr)) {
+                const stat = dailyStatsMap.get(dateStr)!;
+                if (a.type === 'commit') stat.commits++;
+            }
+        });
+
+        recentCheckIns.forEach(c => {
+            const dateStr = c.checkInDate.toISOString().split('T')[0];
+            if (dailyStatsMap.has(dateStr)) {
+                const stat = dailyStatsMap.get(dateStr)!;
+                stat.hours += (c.hoursWorked || 0);
+            }
+        });
+
+        const dailyStats = Array.from(dailyStatsMap.values());
+
         const activitiesFormatted = activities.map(activity => {
             let title = activity.title;
 
@@ -128,6 +167,14 @@ router.get('/:uuid', optionalAuth, async (req: Request, res: Response) => {
                 activeMembers,
                 period: '7 days',
             },
+            dailyStats,
+            reports: reports.map(r => ({
+                id: r.uuid,
+                weekStartDate: r.weekStartDate,
+                weekEndDate: r.weekEndDate,
+                pdfUrl: r.pdfUrl,
+                stats: r.stats
+            })),
             activities: activitiesFormatted,
             checkIns: checkInsFormatted,
             accessedAt: new Date(),

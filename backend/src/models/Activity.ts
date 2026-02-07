@@ -23,13 +23,16 @@ export interface IActivity extends Document {
         repositoryName?: string;
         branchName?: string;
         filesChanged?: number;
+        url?: string;
 
         // Google Calendar
         eventId?: string;
         eventDuration?: number;
 
         // Check-in
+        // Check-in
         checkInId?: mongoose.Types.ObjectId;
+        hours?: number;
     };
 
     activityDate: Date;
@@ -39,7 +42,7 @@ export interface IActivity extends Document {
 
 const ActivitySchema = new Schema<IActivity>(
     {
-        uuid: { type: String, required: true, unique: true },
+        uuid: { type: String, required: true },
         organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
         projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
         userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -59,9 +62,11 @@ const ActivitySchema = new Schema<IActivity>(
             repositoryName: String,
             branchName: String,
             filesChanged: Number,
+            url: String,
             eventId: String,
             eventDuration: Number,
             checkInId: Schema.Types.ObjectId,
+            hours: Number,
         },
 
         activityDate: { type: Date, required: true },

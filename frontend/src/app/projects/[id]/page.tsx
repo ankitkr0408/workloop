@@ -104,6 +104,71 @@ export default function ProjectDetailPage() {
         }
     };
 
+
+    // Reports State
+    interface WeeklyReport {
+        uuid: string;
+        weekStartDate: string;
+        weekEndDate: string;
+        stats: {
+            totalHours: number;
+            totalCommits: number;
+        };
+        pdfUrl?: string; // If null, we might show "Generating..." or "Error"
+        sentToClient: boolean;
+        generatedAt: string;
+    }
+    const [reports, setReports] = useState<WeeklyReport[]>([]);
+    const [generating, setGenerating] = useState(false);
+
+    useEffect(() => {
+        if (params.id) {
+            fetchProjectDetails();
+            fetchActivities();
+            fetchReports();
+        }
+    }, [params.id]);
+
+    const fetchReports = async () => {
+        try {
+            const response = await api.get(`/reports?projectId=${params.id}`);
+            setReports(response.data);
+        } catch (error) {
+            console.error('Failed to fetch reports:', error);
+        }
+    };
+
+    const handleGenerateReport = async () => {
+        if (!project) return;
+        setGenerating(true);
+        try {
+            await api.post('/reports/generate', {
+                projectId: project.id, // Ensure your API expects UUID or handle mapping
+                email: project.clientEmail
+            });
+            // Poll or just wait a bit and refresh? 
+            // For MVP, just alert and refresh after 3s
+            alert('Report generation started. It will appear here shortly.');
+            setTimeout(fetchReports, 3000);
+        } catch (error) {
+            console.error('Failed to generate report:', error);
+            alert('Failed to start report generation.');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    const handleSendReport = async (reportId: string) => {
+        try {
+            await api.post(`/reports/${reportId}/send`);
+            alert('Email sent to client!');
+            fetchReports(); // Refresh to update 'sentToClient' status
+        } catch (error) {
+            console.error('Failed to send report:', error);
+            alert('Failed to send email.');
+        }
+    };
+
     if (loading) {
         return (
             <ProtectedRoute>
@@ -185,6 +250,60 @@ export default function ProjectDetailPage() {
                                     <p className="text-gray-700">{project.description}</p>
                                 </div>
                             )}
+
+                            {/* Weekly Reports Section (New) */}
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                                    <h2 className="text-lg font-bold text-gray-900">Weekly Reports</h2>
+                                    <button
+                                        onClick={handleGenerateReport}
+                                        disabled={generating}
+                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                                    >
+                                        {generating ? 'Generating...' : 'Generate New'}
+                                    </button>
+                                </div>
+                                <div className="p-6">
+                                    {reports.length === 0 ? (
+                                        <p className="text-center text-gray-500 py-4">No reports generated yet</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {reports.map((report) => (
+                                                <div key={report.uuid} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                                    <div>
+                                                        <p className="font-bold text-gray-900">
+                                                            {new Date(report.weekStartDate).toLocaleDateString()} - {new Date(report.weekEndDate).toLocaleDateString()}
+                                                        </p>
+                                                        <div className="flex space-x-4 mt-1 text-xs text-gray-500">
+                                                            <span>⏱ {report.stats.totalHours}h</span>
+                                                            <span>💻 {report.stats.totalCommits} commits</span>
+                                                            {report.sentToClient && <span className="text-green-600 font-medium">✓ Sent</span>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex space-x-2">
+                                                        {report.pdfUrl && (
+                                                            <a
+                                                                href={report.pdfUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                            >
+                                                                Download
+                                                            </a>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleSendReport(report.uuid)}
+                                                            className="px-3 py-1.5 bg-white border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Email Client
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
                             {/* Activity Timeline */}
                             <div className="bg-white rounded-xl shadow-sm border border-gray-200">

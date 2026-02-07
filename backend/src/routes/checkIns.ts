@@ -4,6 +4,7 @@ import CheckIn from '../models/CheckIn';
 import Project from '../models/Project';
 import User from '../models/User';
 import Organization from '../models/Organization';
+import Activity from '../models/Activity'; // Sync check-ins to activity log
 import { requireAuth } from '../middleware/auth';
 
 const router = express.Router();
@@ -76,6 +77,29 @@ router.post('/', requireAuth, async (req: Request, res: Response) => {
             submittedAt: new Date(),
             checkInDate: today,
         });
+
+        // Sync to Activity Log
+        // This ensures it shows up in timlines and PDF reports
+        await Activity.create({
+            uuid: randomUUID(),
+            organizationId: organization._id,
+            projectId: project._id,
+            userId: user._id,
+            userName: user.fullName,
+            userAvatar: user.avatarUrl,
+            type: 'check_in',
+            source: 'manual',
+            title: `Daily Check-in`,
+            description: workedOn, // Use 'workedOn' as the primary description
+            metadata: {
+                checkInId: checkIn._id,
+                hours: hoursWorked
+            },
+            activityDate: new Date()
+        });
+
+        // Update user stats (optional, but good for performance)
+        // await Project.updateOne({ _id: project._id }, { $inc: { 'stats.totalHours': hoursWorked } });
 
         res.status(201).json({
             id: checkIn.uuid,

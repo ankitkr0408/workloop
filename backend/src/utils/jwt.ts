@@ -16,8 +16,8 @@ export interface JWTPayload {
  * Generate access token (short-lived, 15 minutes)
  */
 export const generateAccessToken = (payload: JWTPayload): string => {
-    return jwt.sign(payload, JWT_SECRET, {
-        expiresIn: JWT_ACCESS_EXPIRY as string,
+    return jwt.sign(payload as any, JWT_SECRET, {
+        expiresIn: JWT_ACCESS_EXPIRY as any,
     });
 };
 
@@ -25,8 +25,8 @@ export const generateAccessToken = (payload: JWTPayload): string => {
  * Generate refresh token (long-lived, 7 days)
  */
 export const generateRefreshToken = (payload: JWTPayload): string => {
-    return jwt.sign(payload, JWT_SECRET, {
-        expiresIn: JWT_REFRESH_EXPIRY as string,
+    return jwt.sign(payload as any, JWT_SECRET, {
+        expiresIn: JWT_REFRESH_EXPIRY as any,
     });
 };
 

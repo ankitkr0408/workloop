@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardHeader from '@/components/DashboardHeader';
+import CheckInModal from '@/components/CheckInModal';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,42 +48,67 @@ export default function DashboardPage() {
     const [activities, setActivities] = useState<Activity[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const [selectedProject, setSelectedProject] = useState<{ id: string; name: string } | null>(null);
+    const [checkInSubmittedToday, setCheckInSubmittedToday] = useState(true);
+    const [checkInBannerDismissed, setCheckInBannerDismissed] = useState(false);
 
     useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                // Fetch projects
-                const projectsRes = await api.get('/projects?status=active');
-                const projectsData = projectsRes.data.projects || [];
-                setProjects(projectsData);
-
-                // Fetch recent activities
-                const activitiesRes = await api.get('/activities?limit=10');
-                setActivities(activitiesRes.data.activities || []);
-
-                // Fetch check-ins for stats
-                const checkInsRes = await api.get('/check-ins?limit=100');
-                const checkIns = checkInsRes.data.checkIns || [];
-
-                // Calculate stats
-                const totalHours = checkIns.reduce((sum: number, c: any) => sum + (c.hoursWorked || 0), 0);
-                const totalCommits = activitiesRes.data.activities?.filter((a: Activity) => a.type === 'commit').length || 0;
-
-                setStats({
-                    totalProjects: projectsData.length,
-                    totalHours,
-                    totalCommits,
-                    totalCheckIns: checkIns.length,
-                });
-            } catch (error) {
-                console.error('Failed to fetch dashboard data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchDashboardData();
+        checkTodayCheckIn();
     }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            // Fetch projects
+            const projectsRes = await api.get('/projects?status=active');
+            const projectsData = projectsRes.data.projects || [];
+            setProjects(projectsData);
+
+            // Fetch recent activities
+            const activitiesRes = await api.get('/activities?limit=10');
+            setActivities(activitiesRes.data.activities || []);
+
+            // Fetch check-ins for stats
+            const checkInsRes = await api.get('/check-ins?limit=100');
+            const checkIns = checkInsRes.data.checkIns || [];
+
+            // Calculate stats
+            const totalHours = checkIns.reduce((sum: number, c: any) => sum + (c.hoursWorked || 0), 0);
+            const totalCommits = activitiesRes.data.activities?.filter((a: Activity) => a.type === 'commit').length || 0;
+
+            setStats({
+                totalProjects: projectsData.length,
+                totalHours,
+                totalCommits,
+                totalCheckIns: checkIns.length,
+            });
+        } catch (error) {
+            console.error('Failed to fetch dashboard data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const checkTodayCheckIn = async () => {
+        try {
+            const response = await api.get('/check-ins/today');
+            setCheckInSubmittedToday(response.data.submitted);
+        } catch (error) {
+            console.error('Failed to check today check-in:', error);
+        }
+    };
+
+    const handleCheckInClick = (project: Project) => {
+        setSelectedProject({ id: project.id, name: project.name });
+        setShowCheckInModal(true);
+    };
+
+    const handleCheckInSuccess = () => {
+        setCheckInSubmittedToday(true);
+        setCheckInBannerDismissed(false);
+        fetchDashboardData();
+    };
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -119,6 +145,43 @@ export default function DashboardPage() {
                 <DashboardHeader />
 
                 <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Check-in Banner */}
+                    {!checkInSubmittedToday && !checkInBannerDismissed && projects.length > 0 && (
+                        <div className="mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6 shadow-sm">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-4">
+                                    <div className="text-3xl">⏰</div>
+                                    <div className="flex-1">
+                                        <h3 className="text-lg font-bold text-gray-900">Daily Check-in Reminder</h3>
+                                        <p className="text-gray-700 mt-1">
+                                            You haven't submitted your check-in today. Keep clients in the loop! (Takes 60 seconds)
+                                        </p>
+                                        <div className="mt-4 flex items-center space-x-3">
+                                            <button
+                                                onClick={() => handleCheckInClick(projects[0])}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                                            >
+                                                Submit Check-in
+                                            </button>
+                                            <button
+                                                onClick={() => setCheckInBannerDismissed(true)}
+                                                className="text-sm text-gray-600 hover:text-gray-900"
+                                            >
+                                                Remind me later
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setCheckInBannerDismissed(true)}
+                                    className="text-gray-400 hover:text-gray-600 text-xl"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Welcome Section */}
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-gray-900">
@@ -247,25 +310,32 @@ export default function DashboardPage() {
                                     ) : (
                                         <div className="space-y-3">
                                             {projects.slice(0, 5).map((project) => (
-                                                <Link
-                                                    key={project.id}
-                                                    href={`/projects/${project.id}`}
-                                                    className="block p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition"
-                                                >
-                                                    <h3 className="font-medium text-gray-900">{project.name}</h3>
-                                                    <p className="text-sm text-gray-600 mt-1">{project.clientName}</p>
-                                                    <div className="flex items-center justify-between mt-2">
-                                                        <span className="text-xs text-gray-500">
-                                                            {project.memberCount || 0} members
-                                                        </span>
-                                                        <span className={`text-xs px-2 py-1 rounded-full ${project.status === 'active'
-                                                                ? 'bg-green-100 text-green-700'
-                                                                : 'bg-gray-100 text-gray-700'
-                                                            }`}>
-                                                            {project.status}
-                                                        </span>
-                                                    </div>
-                                                </Link>
+                                                <div key={project.id} className="relative group">
+                                                    <Link
+                                                        href={`/projects/${project.id}`}
+                                                        className="block p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 transition"
+                                                    >
+                                                        <h3 className="font-medium text-gray-900">{project.name}</h3>
+                                                        <p className="text-sm text-gray-600 mt-1">{project.clientName}</p>
+                                                        <div className="flex items-center justify-between mt-2">
+                                                            <span className="text-xs text-gray-500">
+                                                                {project.memberCount || 0} members
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-1 rounded-full ${project.status === 'active'
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'bg-gray-100 text-gray-700'
+                                                                }`}>
+                                                                {project.status}
+                                                            </span>
+                                                        </div>
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => handleCheckInClick(project)}
+                                                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition px-2 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700"
+                                                    >
+                                                        Check-in
+                                                    </button>
+                                                </div>
                                             ))}
                                             {projects.length > 5 && (
                                                 <Link
@@ -282,6 +352,27 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 </main>
+
+                {/* Check-in Modal */}
+                {showCheckInModal && selectedProject && (
+                    <CheckInModal
+                        projectId={selectedProject.id}
+                        projectName={selectedProject.name}
+                        onClose={() => setShowCheckInModal(false)}
+                        onSuccess={handleCheckInSuccess}
+                    />
+                )}
+
+                {/* Floating Check-in Button */}
+                {!checkInSubmittedToday && projects.length > 0 && (
+                    <button
+                        onClick={() => handleCheckInClick(projects[0])}
+                        className="fixed bottom-8 right-8 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition flex items-center space-x-2 z-40"
+                    >
+                        <span className="text-xl">✅</span>
+                        <span className="font-medium">Submit Check-in</span>
+                    </button>
+                )}
             </div>
         </ProtectedRoute>
     );
